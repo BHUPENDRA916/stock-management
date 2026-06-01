@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { ordersApi, customersApi, productsApi } from '../api';
 import { useToast } from '../context/ToastContext';
 import ConfirmDialog from '../components/ConfirmDialog';
-import { Plus, Trash2, ShoppingCart, X, Eye } from 'lucide-react';
+import { Plus, Trash2, ShoppingCart, X, Eye, Search } from 'lucide-react';
 
 function CreateOrderModal({ onClose, onSaved }) {
   const { addToast } = useToast();
@@ -174,6 +174,9 @@ export default function Orders() {
   const [showCreate, setShowCreate] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [viewOrder, setViewOrder] = useState(null);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all'); 
+  const [sortBy, setSortBy] = useState('date-desc');
   const { addToast } = useToast();
 
   const load = () => {
@@ -195,26 +198,85 @@ export default function Orders() {
     }
   };
 
+  const filteredOrders = orders
+    .filter(o => {
+      const query = search.toLowerCase();
+      const matchesSearch = 
+        String(o.id).includes(query) ||
+        (o.customer?.full_name && o.customer.full_name.toLowerCase().includes(query)) ||
+        (o.customer?.email && o.customer.email.toLowerCase().includes(query));
+
+      const matchesStatus = statusFilter === 'all' || o.status === statusFilter;
+
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'date-desc') return new Date(b.created_at) - new Date(a.created_at);
+      if (sortBy === 'date-asc') return new Date(a.created_at) - new Date(b.created_at);
+      if (sortBy === 'total-desc') return b.total_amount - a.total_amount;
+      if (sortBy === 'total-asc') return a.total_amount - b.total_amount;
+      if (sortBy === 'id-desc') return b.id - a.id;
+      return 0;
+    });
+
+  const isFiltered = search !== '' || statusFilter !== 'all';
+
   return (
     <div>
       <div className="page-header">
         <div className="page-header-left">
           <h2>Orders</h2>
-          <p>{orders.length} total orders</p>
+          <p>
+            {isFiltered 
+              ? `Showing ${filteredOrders.length} of ${orders.length} orders` 
+              : `${orders.length} total orders`}
+          </p>
         </div>
         <button className="btn btn-primary" onClick={() => setShowCreate(true)}>
           <Plus size={15} /> Create Order
         </button>
       </div>
       <div className="page-body">
+        <div className="filter-bar">
+          <div className="search-input-wrap">
+            <Search size={16} />
+            <input 
+              type="text" 
+              placeholder="Search orders by customer or ID..." 
+              value={search} 
+              onChange={e => setSearch(e.target.value)} 
+            />
+          </div>
+          <select 
+            className="filter-select" 
+            value={statusFilter} 
+            onChange={e => setStatusFilter(e.target.value)}
+          >
+            <option value="all">All Statuses</option>
+            <option value="pending">Pending</option>
+            <option value="completed">Completed</option>
+          </select>
+          <select 
+            className="filter-select" 
+            value={sortBy} 
+            onChange={e => setSortBy(e.target.value)}
+          >
+            <option value="date-desc">Newest Orders</option>
+            <option value="date-asc">Oldest Orders</option>
+            <option value="total-desc">Total (High to Low)</option>
+            <option value="total-asc">Total (Low to High)</option>
+            <option value="id-desc">Order ID</option>
+          </select>
+        </div>
+
         <div className="card">
           {loading ? (
             <div className="loading"><div className="spinner" /> Loading…</div>
-          ) : orders.length === 0 ? (
+          ) : filteredOrders.length === 0 ? (
             <div className="empty-state">
               <ShoppingCart size={40} />
-              <h4>No orders yet</h4>
-              <p>Click "Create Order" to place the first order</p>
+              <h4>{isFiltered ? 'No matches found' : 'No orders yet'}</h4>
+              <p>{isFiltered ? 'Try adjusting your search or filters' : 'Click "Create Order" to place the first order'}</p>
             </div>
           ) : (
             <div className="table-wrap">
@@ -231,7 +293,7 @@ export default function Orders() {
                   </tr>
                 </thead>
                 <tbody>
-                  {orders.map(o => (
+                  {filteredOrders.map(o => (
                     <tr key={o.id}>
                       <td className="mono" style={{ color: 'var(--text-muted)' }}>#{o.id}</td>
                       <td><strong>{o.customer?.full_name || `#${o.customer_id}`}</strong></td>
@@ -278,3 +340,4 @@ export default function Orders() {
     </div>
   );
 }
+

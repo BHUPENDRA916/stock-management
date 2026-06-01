@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { productsApi } from '../api';
 import { useToast } from '../context/ToastContext';
 import ConfirmDialog from '../components/ConfirmDialog';
-import { Plus, Pencil, Trash2, Package } from 'lucide-react';
+import { Plus, Pencil, Trash2, Package, Search } from 'lucide-react';
 
 function ProductModal({ product, onClose, onSaved }) {
   const { addToast } = useToast();
@@ -90,6 +90,9 @@ export default function Products() {
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(null); 
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [search, setSearch] = useState('');
+  const [stockFilter, setStockFilter] = useState('all'); 
+  const [sortBy, setSortBy] = useState('name-asc');
   const { addToast } = useToast();
 
   const load = () => {
@@ -111,26 +114,95 @@ export default function Products() {
     }
   };
 
+  const filteredProducts = products
+    .filter(p => {
+      const query = search.toLowerCase();
+      const matchesSearch = 
+        p.name.toLowerCase().includes(query) || 
+        p.sku.toLowerCase().includes(query) || 
+        (p.description && p.description.toLowerCase().includes(query));
+
+      let matchesStock = true;
+      if (stockFilter === 'low') {
+        matchesStock = p.quantity > 0 && p.quantity <= 10;
+      } else if (stockFilter === 'out') {
+        matchesStock = p.quantity === 0;
+      } else if (stockFilter === 'instock') {
+        matchesStock = p.quantity > 10;
+      }
+
+      return matchesSearch && matchesStock;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'name-asc') return a.name.localeCompare(b.name);
+      if (sortBy === 'name-desc') return b.name.localeCompare(a.name);
+      if (sortBy === 'price-asc') return a.price - b.price;
+      if (sortBy === 'price-desc') return b.price - a.price;
+      if (sortBy === 'stock-asc') return a.quantity - b.quantity;
+      if (sortBy === 'stock-desc') return b.quantity - a.quantity;
+      return 0;
+    });
+
+  const isFiltered = search !== '' || stockFilter !== 'all';
+
   return (
     <div>
       <div className="page-header">
         <div className="page-header-left">
           <h2>Products</h2>
-          <p>{products.length} total products</p>
+          <p>
+            {isFiltered 
+              ? `Showing ${filteredProducts.length} of ${products.length} products` 
+              : `${products.length} total products`}
+          </p>
         </div>
         <button className="btn btn-primary" onClick={() => setModal('create')}>
           <Plus size={15} /> Add Product
         </button>
       </div>
       <div className="page-body">
+        <div className="filter-bar">
+          <div className="search-input-wrap">
+            <Search size={16} />
+            <input 
+              type="text" 
+              placeholder="Search products by name, SKU..." 
+              value={search} 
+              onChange={e => setSearch(e.target.value)} 
+            />
+          </div>
+          <select 
+            className="filter-select" 
+            value={stockFilter} 
+            onChange={e => setStockFilter(e.target.value)}
+          >
+            <option value="all">All Stock Levels</option>
+            <option value="instock">In Stock (&gt; 10)</option>
+            <option value="low">Low Stock (1-10)</option>
+            <option value="out">Out of Stock (0)</option>
+          </select>
+          <select 
+            className="filter-select" 
+            value={sortBy} 
+            onChange={e => setSortBy(e.target.value)}
+          >
+            <option value="name-asc">Name (A to Z)</option>
+            <option value="name-desc">Name (Z to A)</option>
+            <option value="price-asc">Price (Low to High)</option>
+            <option value="price-desc">Price (High to Low)</option>
+            <option value="stock-asc">Stock (Low to High)</option>
+            <option value="stock-desc">Stock (High to Low)</option>
+          </select>
+        </div>
+
         <div className="card">
           {loading ? (
             <div className="loading"><div className="spinner" /> Loading…</div>
-          ) : products.length === 0 ? (
+          ) : filteredProducts.length === 0 ? (
             <div className="empty-state">
               <Package size={40} />
-              <h4>No products yet</h4>
-              <p>Click "Add Product" to get started</p>
+              <h4>{isFiltered ? 'No matches found' : 'No products yet'}</h4>
+              <p>{isFiltered ? 'Try adjusting your search or filters' : 'Click "Add Product" to get started'}</p>
             </div>
           ) : (
             <div className="table-wrap">
@@ -146,7 +218,7 @@ export default function Products() {
                   </tr>
                 </thead>
                 <tbody>
-                  {products.map(p => (
+                  {filteredProducts.map(p => (
                     <tr key={p.id}>
                       <td><strong>{p.name}</strong></td>
                       <td><span className="mono badge badge-gray">{p.sku}</span></td>
@@ -196,3 +268,4 @@ export default function Products() {
     </div>
   );
 }
+

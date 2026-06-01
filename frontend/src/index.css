@@ -684,3 +684,71 @@ textarea {
   .form-grid { grid-template-columns: 1fr; }
   .order-item-row { grid-template-columns: 1fr 80px auto; }
 }
+
+/* Filter and Search Bar */
+.filter-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.search-input-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 240px;
+}
+
+.search-input-wrap svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.search-input-wrap input {
+  padding-left: 36px;
+}
+
+.filter-select {
+  width: 180px;
+  flex-shrink: 0;
+}
+
+.filter-tags {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.filter-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+}
+
+.filter-tag:hover {
+  border-color: var(--text-muted);
+  color: var(--text);
+}
+
+.filter-tag.active {
+  background: rgba(232, 255, 71, 0.1);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+

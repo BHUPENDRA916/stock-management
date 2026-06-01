@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { customersApi } from '../api';
 import { useToast } from '../context/ToastContext';
 import ConfirmDialog from '../components/ConfirmDialog';
-import { Plus, Trash2, Users } from 'lucide-react';
+import { Plus, Trash2, Users, Search } from 'lucide-react';
 
 function CustomerModal({ onClose, onSaved }) {
   const { addToast } = useToast();
@@ -70,6 +70,8 @@ export default function Customers() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState('name-asc');
   const { addToast } = useToast();
 
   const load = () => {
@@ -91,26 +93,73 @@ export default function Customers() {
     }
   };
 
+  const filteredCustomers = customers
+    .filter(c => {
+      const query = search.toLowerCase();
+      return (
+        c.full_name.toLowerCase().includes(query) ||
+        c.email.toLowerCase().includes(query) ||
+        (c.phone_number && c.phone_number.toLowerCase().includes(query))
+      );
+    })
+    .sort((a, b) => {
+      if (sortBy === 'name-asc') return a.full_name.localeCompare(b.full_name);
+      if (sortBy === 'name-desc') return b.full_name.localeCompare(a.full_name);
+      if (sortBy === 'date-desc') return new Date(b.created_at) - new Date(a.created_at);
+      if (sortBy === 'date-asc') return new Date(a.created_at) - new Date(b.created_at);
+      if (sortBy === 'id-asc') return a.id - b.id;
+      return 0;
+    });
+
+  const isFiltered = search !== '';
+
   return (
     <div>
       <div className="page-header">
         <div className="page-header-left">
           <h2>Customers</h2>
-          <p>{customers.length} registered customers</p>
+          <p>
+            {isFiltered 
+              ? `Showing ${filteredCustomers.length} of ${customers.length} customers` 
+              : `${customers.length} registered customers`}
+          </p>
         </div>
         <button className="btn btn-primary" onClick={() => setShowModal(true)}>
           <Plus size={15} /> Add Customer
         </button>
       </div>
       <div className="page-body">
+        <div className="filter-bar">
+          <div className="search-input-wrap">
+            <Search size={16} />
+            <input 
+              type="text" 
+              placeholder="Search customers by name, email, phone..." 
+              value={search} 
+              onChange={e => setSearch(e.target.value)} 
+            />
+          </div>
+          <select 
+            className="filter-select" 
+            value={sortBy} 
+            onChange={e => setSortBy(e.target.value)}
+          >
+            <option value="name-asc">Name (A to Z)</option>
+            <option value="name-desc">Name (Z to A)</option>
+            <option value="date-desc">Newest Joined</option>
+            <option value="date-asc">Oldest Joined</option>
+            <option value="id-asc">Customer ID</option>
+          </select>
+        </div>
+
         <div className="card">
           {loading ? (
             <div className="loading"><div className="spinner" /> Loading…</div>
-          ) : customers.length === 0 ? (
+          ) : filteredCustomers.length === 0 ? (
             <div className="empty-state">
               <Users size={40} />
-              <h4>No customers yet</h4>
-              <p>Click "Add Customer" to get started</p>
+              <h4>{isFiltered ? 'No matches found' : 'No customers yet'}</h4>
+              <p>{isFiltered ? 'Try adjusting your search criteria' : 'Click "Add Customer" to get started'}</p>
             </div>
           ) : (
             <div className="table-wrap">
@@ -126,7 +175,7 @@ export default function Customers() {
                   </tr>
                 </thead>
                 <tbody>
-                  {customers.map(c => (
+                  {filteredCustomers.map(c => (
                     <tr key={c.id}>
                       <td className="mono" style={{ color: 'var(--text-muted)' }}>#{c.id}</td>
                       <td><strong>{c.full_name}</strong></td>
@@ -162,3 +211,4 @@ export default function Customers() {
     </div>
   );
 }
+
