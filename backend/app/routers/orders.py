@@ -49,7 +49,7 @@ def create_order(order: schemas.OrderCreate, db: Session = Depends(get_db)):
     db.add(db_order)
     db.flush()
 
- items and deduct stock
+    # Create items and deduct stock
     for item_data in order_items_data:
         order_item = models.OrderItem(
             order_id=db_order.id,
